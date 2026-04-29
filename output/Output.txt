@@ -1,0 +1,198 @@
+Output: tarin_and_save.py
+
+============================================================
+  California Housing — End-to-End Pipeline (Day 20)
+============================================================
+
+[1] Dataset loaded  →  20,640 rows × 8 features
+    Features : ['MedInc', 'HouseAge', 'AveRooms', 'AveBedrms', 'Population', 'AveOccup', 'Latitude', 'Longitude']
+    Target   : Median House Value (×$100k)
+
+[2] Split  →  Train: 16,512  |  Test: 4,128
+
+[3] Pipeline architecture:
+    └─ scaler       → StandardScaler
+    └─ regressor    → RandomForestRegressor
+
+[4] Training …  (this may take ~10 s)
+    ✓ Training complete!
+
+[5] Evaluation on hold-out test set:
+    R²   Score : 0.8059   (1.0 = perfect)
+    RMSE       : $50,438
+    MAE        : $32,642
+
+    Feature Importances (top 8):
+    MedInc       ████████████████████████████████ 0.5348
+    AveOccup     ████████ 0.1383
+    Latitude     █████ 0.0885
+    Longitude    █████ 0.0882
+    HouseAge     ███ 0.0534
+    AveRooms     ██ 0.0423
+    Population   █ 0.0278
+    AveBedrms    █ 0.0265
+
+[6] ✓ Pipeline saved  →  production_model.pkl
+    Load anywhere with:  pipeline = joblib.load('production_model.pkl')
+
+
+Output: teat_api.py
+───────────────────────────────────────────────────────
+  TEST 1 — Health Check  (GET /)
+───────────────────────────────────────────────────────
+Status: 200
+{
+  "endpoint": "POST /predict",
+  "features": [
+    "MedInc",
+    "HouseAge",
+    "AveRooms",
+    "AveBedrms",
+    "Population",
+    "AveOccup",
+    "Latitude",
+    "Longitude"
+  ],
+  "service": "California Housing Price Predictor",
+  "status": "running",
+  "version": "1.0.0"
+}
+
+───────────────────────────────────────────────────────
+  TEST 2 — Single Prediction  (POST /predict)
+───────────────────────────────────────────────────────
+Sending payload:
+{
+  "MedInc": 8.3252,
+  "HouseAge": 41.0,
+  "AveRooms": 6.9841,
+  "AveBedrms": 1.0238,
+  "Population": 322.0,
+  "AveOccup": 2.5556,
+  "Latitude": 37.88,
+  "Longitude": -122.23
+}
+
+Status: 200
+Response:
+{
+  "input_features": {
+    "AveBedrms": 1.0238,
+    "AveOccup": 2.5556,
+    "AveRooms": 6.9841,
+    "HouseAge": 41.0,
+    "Latitude": 37.88,
+    "Longitude": -122.23,
+    "MedInc": 8.3252,
+    "Population": 322.0
+  },
+  "model": "RandomForestRegressor + StandardScaler Pipeline",
+  "prediction_100k": 4.2738,
+  "prediction_label": "$427,376",
+  "prediction_usd": 427375.69
+}
+
+───────────────────────────────────────────────────────
+  TEST 3 — Affordable Inland House  (POST /predict)
+───────────────────────────────────────────────────────
+Sending payload:
+{
+  "MedInc": 2.5,
+  "HouseAge": 20.0,
+  "AveRooms": 4.5,
+  "AveBedrms": 1.1,
+  "Population": 1200.0,
+  "AveOccup": 3.0,
+  "Latitude": 35.5,
+  "Longitude": -119.0
+}
+
+Status: 200
+Response:
+{
+  "input_features": {
+    "AveBedrms": 1.1,
+    "AveOccup": 3.0,
+    "AveRooms": 4.5,
+    "HouseAge": 20.0,
+    "Latitude": 35.5,
+    "Longitude": -119.0,
+    "MedInc": 2.5,
+    "Population": 1200.0
+  },
+  "model": "RandomForestRegressor + StandardScaler Pipeline",
+  "prediction_100k": 0.7585,
+  "prediction_label": "$75,848",
+  "prediction_usd": 75848.14
+}
+
+───────────────────────────────────────────────────────
+  TEST 4 — Batch Prediction  (POST /batch_predict)
+───────────────────────────────────────────────────────
+Status: 200
+Response:
+{
+  "count": 3,
+  "predictions": [
+    {
+      "prediction_100k": 4.2738,
+      "prediction_usd": 427375.69,
+      "record_index": 0
+    },
+    {
+      "prediction_100k": 0.7585,
+      "prediction_usd": 75848.14,
+      "record_index": 1
+    },
+    {
+      "prediction_100k": 2.4027,
+      "prediction_usd": 240274.63,
+      "record_index": 2
+    }
+  ]
+}
+
+───────────────────────────────────────────────────────
+  TEST 5 — Missing Feature Error Handling  (POST /predict)
+───────────────────────────────────────────────────────
+Status: 400  (expected 400)
+{
+  "error": "Missing required features",
+  "missing": [
+    "AveRooms",
+    "AveBedrms",
+    "Population",
+    "AveOccup",
+    "Latitude",
+    "Longitude"
+  ],
+  "required": [
+    "MedInc",
+    "HouseAge",
+    "AveRooms",
+    "AveBedrms",
+    "Population",
+    "AveOccup",
+    "Latitude",
+    "Longitude"
+  ]
+}
+
+───────────────────────────────────────────────────────
+  ALL TESTS COMPLETE ✓
+───────────────────────────────────────────────────────
+
+WHY SAVE A PIPELINE INSTEAD OF SEPARATE FILES?
+───────────────────────────────────────────────
+Two-file approach (bad):
+    scaler.pkl + model.pkl
+    → You must remember to call scaler.transform() BEFORE model.predict()
+    → Easy to forget in production → wrong predictions silently
+    → The scaler fit on training data must be manually managed
+
+Pipeline approach (correct):
+    production_model.pkl  (contains BOTH scaler + model)
+    → pipeline.predict(X) does scaling + predicting atomically
+    → Impossible to skip the scaling step
+    → One file to version-control, deploy, and share
+    → Prevents DATA LEAKAGE by design

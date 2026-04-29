@@ -1,0 +1,10 @@
+# Day 20 — California Housing ML API
+# Install: pip install -r requirements.txt
+
+flask==3.1.0
+flask-cors==5.0.0
+joblib==1.5.0
+scikit-learn==1.7.2
+pandas==2.2.3
+numpy==1.26.4
+requests==2.32.5

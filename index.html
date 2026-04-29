@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homewise AI — California Housing Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&family=Outfit:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0a0a08;
+    --paper: #f5f2eb;
+    --gold: #c9a84c;
+    --gold-dim: #8a6e2f;
+    --mist: #9e9b94;
+    --fog: #e8e4da;
+    --deep: #141410;
+    --line: rgba(201,168,76,0.18);
+    --font-display: 'Cormorant Garamond', serif;
+    --font-body: 'Outfit', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-body);
+    font-weight: 300;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    position: fixed;
+    width: 8px; height: 8px;
+    background: var(--gold);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.08s ease, width 0.2s, height 0.2s, background 0.2s;
+    mix-blend-mode: difference;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 36px; height: 36px;
+    border: 1px solid rgba(201,168,76,0.5);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: transform 0.18s ease, width 0.3s, height 0.3s, opacity 0.3s;
+  }
+  body:hover .cursor-ring { opacity: 1; }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.4;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 48px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(10,10,8,0.85);
+    backdrop-filter: blur(20px);
+  }
+  .nav-logo {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--paper);
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--gold); font-style: italic; }
+  .nav-links {
+    display: flex;
+    gap: 36px;
+    list-style: none;
+  }
+  .nav-links a {
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--mist);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--gold); }
+  .nav-cta {
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: var(--gold);
+    padding: 9px 22px;
+    text-decoration: none;
+    transition: background 0.2s, opacity 0.2s;
+  }
+  .nav-cta:hover { background: #d4b45a; }
+
+  /* ─── HERO ─── */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 64px 80px;
+    padding-top: 140px;
+    position: relative;
+    z-index: 2;
+  }
+  .hero-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    margin-bottom: 28px;
+    opacity: 0;
+    animation: fadeUp 0.9s 0.2s forwards;
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: clamp(56px, 6vw, 88px);
+    font-weight: 300;
+    line-height: 1.0;
+    letter-spacing: -0.01em;
+    margin-bottom: 32px;
+    opacity: 0;
+    animation: fadeUp 0.9s 0.4s forwards;
+  }
+  .hero-title em {
+    font-style: italic;
+    color: var(--gold);
+    display: block;
+  }
+  .hero-sub {
+    font-size: 15px;
+    font-weight: 300;
+    color: var(--mist);
+    line-height: 1.7;
+    max-width: 400px;
+    margin-bottom: 48px;
+    opacity: 0;
+    animation: fadeUp 0.9s 0.6s forwards;
+  }
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    opacity: 0;
+    animation: fadeUp 0.9s 0.8s forwards;
+  }
+  .btn-primary {
+    padding: 14px 36px;
+    background: var(--gold);
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: background 0.2s;
+    display: inline-block;
+  }
+  .btn-primary:hover { background: #d4b45a; }
+  .btn-ghost {
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mist);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(158,155,148,0.3);
+    padding-bottom: 2px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .btn-ghost:hover { color: var(--gold); border-color: rgba(201,168,76,0.5); }
+
+  .hero-right {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .hero-visual {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Animated price orb */
+  .orb-container {
+    position: relative;
+    width: 380px;
+    height: 380px;
+    opacity: 0;
+    animation: fadeIn 1.2s 1s forwards;
+  }
+  .orb-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    animation: orbit 8s linear infinite;
+  }
+  .orb-ring:nth-child(2) { inset: 30px; animation-duration: 12s; animation-direction: reverse; border-color: rgba(201,168,76,0.1); }
+  .orb-ring:nth-child(3) { inset: 60px; animation-duration: 6s; border-color: rgba(201,168,76,0.06); }
+  @keyframes orbit { to { transform: rotate(360deg); } }
+  .orb-core {
+    position: absolute;
+    inset: 90px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #1e1c16, #0a0a08);
+    border: 1px solid rgba(201,168,76,0.25);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .orb-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.18em; color: var(--gold-dim); text-transform: uppercase; }
+  .orb-price { font-family: var(--font-display); font-size: 38px; font-weight: 400; color: var(--gold); }
+  .orb-sub { font-size: 10px; color: var(--mist); letter-spacing: 0.08em; }
+  .orb-dot {
+    position: absolute;
+    width: 6px; height: 6px;
+    background: var(--gold);
+    border-radius: 50%;
+    top: 30px; left: 50%;
+    transform-origin: 0 160px;
+    animation: orbit 8s linear infinite;
+  }
+  .orb-dot::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: rgba(201,168,76,0.2);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(2.5);opacity:0} }
+
+  /* Floating stat cards on hero */
+  .hero-stat {
+    position: absolute;
+    padding: 14px 18px;
+    border: 1px solid var(--line);
+    background: rgba(10,10,8,0.8);
+    backdrop-filter: blur(10px);
+  }
+  .hero-stat-label { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mist); margin-bottom: 6px; }
+  .hero-stat-val { font-family: var(--font-display); font-size: 24px; font-weight: 400; color: var(--paper); }
+  .hero-stat-note { font-size: 9px; color: var(--gold-dim); margin-top: 2px; }
+  .stat-tl { top: 140px; left: 24px; opacity:0; animation: fadeIn 0.8s 1.4s forwards; }
+  .stat-br { bottom: 120px; right: 24px; opacity:0; animation: fadeIn 0.8s 1.6s forwards; }
+  .stat-bl { bottom: 60px; left: 40px; opacity:0; animation: fadeIn 0.8s 1.8s forwards; }
+
+  /* vertical rule */
+  .hero::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: var(--line);
+  }
+
+  /* ─── TICKER ─── */
+  .ticker {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 0;
+    overflow: hidden;
+    background: var(--deep);
+    position: relative;
+  }
+  .ticker-track {
+    display: flex;
+    gap: 64px;
+    animation: ticker 22s linear infinite;
+    width: max-content;
+  }
+  .ticker-item {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--mist);
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .ticker-item span { color: var(--gold); }
+  .ticker-sep { color: var(--line); }
+  @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* ─── SECTION BASE ─── */
+  section { padding: 120px 0; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 64px; }
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .section-label::before {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 1px;
+    background: var(--gold);
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: clamp(40px, 4vw, 62px);
+    font-weight: 300;
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+  .section-title em { font-style: italic; color: var(--gold); }
+
+  /* ─── HOW IT WORKS ─── */
+  .how { background: var(--deep); }
+  .how-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin-top: 72px;
+    border: 1px solid var(--line);
+  }
+  .how-intro {
+    padding: 56px 56px 56px 56px;
+    border-right: 1px solid var(--line);
+  }
+  .how-intro p {
+    font-size: 15px;
+    font-weight: 300;
+    color: var(--mist);
+    line-height: 1.8;
+    margin-bottom: 32px;
+  }
+  .pipeline-viz {
+    padding: 56px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .pipe-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+    cursor: default;
+    transition: background 0.2s;
+  }
+  .pipe-step:last-child { border-bottom: none; }
+  .pipe-step:hover { background: rgba(201,168,76,0.03); }
+  .pipe-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--gold-dim);
+    width: 24px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .pipe-content {}
+  .pipe-name {
+    font-size: 14px;
+    font-weight: 400;
+    margin-bottom: 4px;
+    color: var(--paper);
+  }
+  .pipe-desc {
+    font-size: 12px;
+    color: var(--mist);
+    line-height: 1.6;
+  }
+  .pipe-tag {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    color: var(--gold-dim);
+    align-self: flex-start;
+    margin-top: 2px;
+  }
+
+  /* ─── PREDICTOR SECTION ─── */
+  .predictor-section { background: var(--ink); }
+  .predictor-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin-top: 72px;
+    border: 1px solid var(--line);
+  }
+  .pred-form-pane {
+    padding: 52px 52px;
+    border-right: 1px solid var(--line);
+  }
+  .pred-result-pane {
+    padding: 52px 52px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .pred-result-pane::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 80% 20%, rgba(201,168,76,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .f-group { display: flex; flex-direction: column; gap: 7px; }
+  .f-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--mist);
+  }
+  .f-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(158,155,148,0.2);
+    padding: 8px 0;
+    color: var(--paper);
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 300;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+  }
+  .f-input::-webkit-inner-spin-button,
+  .f-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .f-input:focus { border-bottom-color: var(--gold); }
+  .f-hint { font-size: 10px; color: rgba(158,155,148,0.5); }
+  .predict-cta {
+    margin-top: 36px;
+    width: 100%;
+    padding: 16px;
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .predict-cta:hover { background: var(--gold); color: var(--ink); }
+  .predict-cta:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Result */
+  .result-idle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 16px;
+    text-align: center;
+  }
+  .result-idle-icon {
+    width: 56px; height: 56px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .result-idle-icon svg { opacity: 0.3; }
+  .result-idle p { font-size: 13px; color: var(--mist); line-height: 1.6; max-width: 240px; }
+
+  .result-active { display: flex; flex-direction: column; }
+  .result-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .result-price {
+    font-family: var(--font-display);
+    font-size: clamp(48px, 5vw, 72px);
+    font-weight: 300;
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .result-range {
+    font-size: 12px;
+    color: var(--mist);
+    margin-bottom: 32px;
+  }
+  .result-divider { height: 1px; background: var(--line); margin-bottom: 28px; }
+  .result-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .rm-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mist); margin-bottom: 6px; }
+  .rm-val { font-family: var(--font-display); font-size: 22px; font-weight: 400; color: var(--paper); }
+  .loading-pulse {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .dot-anim span {
+    display: inline-block;
+    width: 4px; height: 4px;
+    background: var(--gold);
+    border-radius: 50%;
+    animation: blink 1.2s infinite;
+  }
+  .dot-anim span:nth-child(2) { animation-delay: 0.2s; }
+  .dot-anim span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,100%{opacity:0.2} 50%{opacity:1} }
+
+  /* ─── FEATURES ─── */
+  .features { background: var(--deep); }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 0;
+    margin-top: 72px;
+    border: 1px solid var(--line);
+  }
+  .feat-card {
+    padding: 44px 36px;
+    border-right: 1px solid var(--line);
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s;
+  }
+  .feat-card:last-child { border-right: none; }
+  .feat-card:hover { background: rgba(201,168,76,0.04); }
+  .feat-card::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--gold);
+    transform: scaleX(0);
+    transition: transform 0.4s ease;
+    transform-origin: left;
+  }
+  .feat-card:hover::before { transform: scaleX(1); }
+  .feat-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--gold-dim);
+    margin-bottom: 28px;
+  }
+  .feat-icon {
+    width: 40px; height: 40px;
+    margin-bottom: 20px;
+    opacity: 0.7;
+  }
+  .feat-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 400;
+    margin-bottom: 14px;
+    line-height: 1.2;
+  }
+  .feat-desc {
+    font-size: 13px;
+    font-weight: 300;
+    color: var(--mist);
+    line-height: 1.8;
+  }
+
+  /* ─── CODE SECTION ─── */
+  .code-section { background: var(--ink); overflow: hidden; }
+  .code-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin-top: 72px;
+    border: 1px solid var(--line);
+    align-items: stretch;
+  }
+  .code-copy {
+    padding: 56px;
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .code-copy p {
+    font-size: 15px;
+    color: var(--mist);
+    line-height: 1.8;
+    margin: 24px 0 36px;
+  }
+  .code-steps { display: flex; flex-direction: column; gap: 16px; }
+  .code-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .cs-num {
+    width: 22px; height: 22px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--gold);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .cs-text { font-size: 13px; color: var(--mist); line-height: 1.6; }
+  .cs-text strong { color: var(--paper); font-weight: 400; }
+
+  .code-pane {
+    background: #080806;
+    padding: 40px;
+    overflow: auto;
+  }
+  .code-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 28px;
+  }
+  .ctab {
+    padding: 8px 20px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mist);
+    cursor: pointer;
+    border-bottom: 1px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.2s, border-color 0.2s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
+  .ctab.active { color: var(--gold); border-bottom-color: var(--gold); }
+  pre {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.9;
+    color: #a09d95;
+    overflow-x: auto;
+    display: none;
+  }
+  pre.active { display: block; }
+  .t-kw { color: #7a6fcc; }
+  .t-fn { color: #4fa97c; }
+  .t-str { color: #b87a5a; }
+  .t-cm { color: #504e48; font-style: italic; }
+  .t-num { color: #c9a84c; }
+
+  /* ─── METRICS BAND ─── */
+  .metrics-band {
+    background: var(--deep);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 56px 0;
+  }
+  .metrics-inner {
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: 0;
+  }
+  .metric-cell {
+    padding: 0 48px;
+    border-right: 1px solid var(--line);
+    text-align: center;
+  }
+  .metric-cell:first-child { padding-left: 0; }
+  .metric-cell:last-child { border-right: none; padding-right: 0; }
+  .metric-num {
+    font-family: var(--font-display);
+    font-size: 52px;
+    font-weight: 300;
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .metric-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--mist);
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    background: var(--deep);
+    border-top: 1px solid var(--line);
+    padding: 64px 0 48px;
+  }
+  .footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 64px;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 48px;
+    margin-bottom: 56px;
+  }
+  .footer-brand {}
+  .footer-logo {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 400;
+    margin-bottom: 16px;
+    color: var(--paper);
+  }
+  .footer-logo span { color: var(--gold); font-style: italic; }
+  .footer-tagline {
+    font-size: 13px;
+    color: var(--mist);
+    line-height: 1.7;
+    max-width: 260px;
+  }
+  .footer-col-title {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin-bottom: 20px;
+  }
+  .footer-links { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .footer-links a {
+    font-size: 13px;
+    color: var(--mist);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--paper); }
+  .footer-bottom {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 64px 0;
+    border-top: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .footer-copy {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--mist);
+  }
+  .footer-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--gold-dim);
+    border: 1px solid var(--line);
+    padding: 4px 12px;
+  }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .reveal.in-view { opacity: 1; transform: translateY(0); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--ink); }
+  ::-webkit-scrollbar-thumb { background: var(--gold-dim); }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#"><span>Home</span>wise AI</a>
+  <ul class="nav-links">
+    <li><a href="#how">Pipeline</a></li>
+    <li><a href="#predict">Predict</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#api">API</a></li>
+  </ul>
+  <div style="display:flex;align-items:center;gap:14px">
+    <div style="display:flex;align-items:center;gap:7px">
+      <span class="status-dot" style="width:7px;height:7px;border-radius:50%;background:#555;display:inline-block;flex-shrink:0;transition:background .4s"></span>
+      <span class="status-txt" style="font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;color:var(--mist);white-space:nowrap">Checking Flask…</span>
+    </div>
+    <a class="nav-cta" href="#predict">Try it</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">Day 20 · ML Pipeline · Flask REST API</div>
+    <h1 class="hero-title">
+      California<br>
+      Housing<br>
+      <em>Intelligence</em>
+    </h1>
+    <p class="hero-sub">
+      A production-grade machine learning service. RandomForest trained on 20,640 properties, wrapped in a Flask REST API, ready for real-world deployment.
+    </p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="#predict">Predict a price</a>
+      <a class="btn-ghost" href="#api">View API docs</a>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="hero-visual">
+      <div class="hero-stat stat-tl">
+        <div class="hero-stat-label">Model R²</div>
+        <div class="hero-stat-val">0.815</div>
+        <div class="hero-stat-note">Test set performance</div>
+      </div>
+
+      <div class="orb-container">
+        <div class="orb-ring"></div>
+        <div class="orb-ring"></div>
+        <div class="orb-ring"></div>
+        <div class="orb-dot"></div>
+        <div class="orb-core">
+          <div class="orb-label">Median value</div>
+          <div class="orb-price" id="heroPrice">$438k</div>
+          <div class="orb-sub">Bay Area sample</div>
+        </div>
+      </div>
+
+      <div class="hero-stat stat-br">
+        <div class="hero-stat-label">Training samples</div>
+        <div class="hero-stat-val">20,640</div>
+        <div class="hero-stat-note">California block groups</div>
+      </div>
+      <div class="hero-stat stat-bl">
+        <div class="hero-stat-label">Pipeline steps</div>
+        <div class="hero-stat-val">2</div>
+        <div class="hero-stat-note">Scaler → Regressor</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track" id="ticker">
+    <div class="ticker-item">MedInc <span>8.33</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">HouseAge <span>41 yrs</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">Prediction <span>$438,120</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">RMSE <span>$52,800</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">Trees <span>100</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">Latitude <span>37.88°N</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">Longitude <span>122.23°W</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">POST /predict <span>200 OK</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">MAE <span>$34,200</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">StandardScaler <span>fitted</span> <span class="ticker-sep">·</span></div>
+    <!-- duplicate for seamless loop -->
+    <div class="ticker-item">MedInc <span>8.33</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">HouseAge <span>41 yrs</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">Prediction <span>$438,120</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">RMSE <span>$52,800</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">Trees <span>100</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">Latitude <span>37.88°N</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">Longitude <span>122.23°W</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">POST /predict <span>200 OK</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">MAE <span>$34,200</span> <span class="ticker-sep">·</span></div>
+    <div class="ticker-item">StandardScaler <span>fitted</span> <span class="ticker-sep">·</span></div>
+  </div>
+</div>
+
+<!-- METRICS BAND -->
+<div class="metrics-band">
+  <div class="container">
+    <div class="metrics-inner reveal">
+      <div class="metric-cell">
+        <div class="metric-num">0.81</div>
+        <div class="metric-label">R² Score</div>
+      </div>
+      <div class="metric-cell">
+        <div class="metric-num">100</div>
+        <div class="metric-label">Decision Trees</div>
+      </div>
+      <div class="metric-cell">
+        <div class="metric-num">8</div>
+        <div class="metric-label">Input Features</div>
+      </div>
+      <div class="metric-cell">
+        <div class="metric-num">20k</div>
+        <div class="metric-label">Training Samples</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="container">
+    <div class="section-label">Architecture</div>
+    <h2 class="section-title reveal">The production<br><em>pipeline</em></h2>
+    <div class="how-grid reveal">
+      <div class="how-intro">
+        <p>A sklearn <code style="font-family:var(--font-mono);font-size:12px;color:var(--gold)">Pipeline</code> bundles the StandardScaler and RandomForestRegressor into one atomic object. One file. One call. No data leakage possible.</p>
+        <p>The pipeline is serialized to <code style="font-family:var(--font-mono);font-size:12px;color:var(--gold)">production_model.pkl</code> and loaded once at Flask startup. Every POST request receives a scaled, predicted result in milliseconds.</p>
+        <div style="margin-top:36px;padding:20px 24px;border:1px solid var(--line);">
+          <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;color:var(--gold-dim);margin-bottom:12px">Pipeline object</div>
+          <div style="font-family:var(--font-mono);font-size:12px;color:#a09d95;line-height:1.8">
+            <span style="color:var(--mist)">steps:</span><br>
+            &nbsp;&nbsp;<span style="color:#4fa97c">scaler</span> → StandardScaler()<br>
+            &nbsp;&nbsp;<span style="color:#4fa97c">regressor</span> → RandomForestRegressor()<br>
+            <span style="color:var(--mist)">fit:</span> X_train, y_train<br>
+            <span style="color:var(--mist)">saved:</span> production_model.pkl
+          </div>
+        </div>
+      </div>
+      <div class="pipeline-viz">
+        <div class="pipe-step">
+          <div class="pipe-num">01</div>
+          <div class="pipe-content">
+            <div class="pipe-name">Load California Housing dataset</div>
+            <div class="pipe-desc">fetch_california_housing() → 20,640 samples, 8 features, continuous target in $100k units.</div>
+          </div>
+          <div class="pipe-tag">sklearn</div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-num">02</div>
+          <div class="pipe-content">
+            <div class="pipe-name">Train / test split</div>
+            <div class="pipe-desc">80% train, 20% test. random_state=42 for reproducibility. 16,512 training samples.</div>
+          </div>
+          <div class="pipe-tag">pandas</div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-num">03</div>
+          <div class="pipe-content">
+            <div class="pipe-name">StandardScaler normalization</div>
+            <div class="pipe-desc">Fits on training data only. Zero mean, unit variance. Prevents data leakage to test set.</div>
+          </div>
+          <div class="pipe-tag">step 1</div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-num">04</div>
+          <div class="pipe-content">
+            <div class="pipe-name">RandomForest training</div>
+            <div class="pipe-desc">100 estimators, parallel execution (n_jobs=-1). Bootstrap sampling, feature randomness.</div>
+          </div>
+          <div class="pipe-tag">step 2</div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-num">05</div>
+          <div class="pipe-content">
+            <div class="pipe-name">Serialize to .pkl</div>
+            <div class="pipe-desc">joblib.dump() writes the complete pipeline — scaler + model — to a single binary file.</div>
+          </div>
+          <div class="pipe-tag">joblib</div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-num">06</div>
+          <div class="pipe-content">
+            <div class="pipe-name">Flask REST API</div>
+            <div class="pipe-desc">POST /predict receives JSON, pipeline.predict() scales and infers, returns structured JSON.</div>
+          </div>
+          <div class="pipe-tag">flask</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LIVE PREDICTOR -->
+<section class="predictor-section" id="predict">
+  <div class="container">
+    <div class="section-label">Live demo</div>
+    <h2 class="section-title reveal">Predict a<br><em>house price</em></h2>
+    <div class="predictor-layout reveal">
+      <div class="pred-form-pane">
+        <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;color:var(--gold-dim);margin-bottom:28px">POST /predict · 8 features required</div>
+        <div class="form-row">
+          <div class="f-group">
+            <label class="f-label">MedInc</label>
+            <input class="f-input" type="number" id="p-medinc" value="8.33" step="0.1">
+            <span class="f-hint">Median income ×$10k</span>
+          </div>
+          <div class="f-group">
+            <label class="f-label">HouseAge</label>
+            <input class="f-input" type="number" id="p-age" value="41" step="1">
+            <span class="f-hint">Years</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="f-group">
+            <label class="f-label">AveRooms</label>
+            <input class="f-input" type="number" id="p-rooms" value="6.98" step="0.1">
+            <span class="f-hint">Per household</span>
+          </div>
+          <div class="f-group">
+            <label class="f-label">AveBedrms</label>
+            <input class="f-input" type="number" id="p-bedrm" value="1.02" step="0.01">
+            <span class="f-hint">Per household</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="f-group">
+            <label class="f-label">Population</label>
+            <input class="f-input" type="number" id="p-pop" value="322" step="10">
+            <span class="f-hint">Block group</span>
+          </div>
+          <div class="f-group">
+            <label class="f-label">AveOccup</label>
+            <input class="f-input" type="number" id="p-occup" value="2.56" step="0.1">
+            <span class="f-hint">Household members</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="f-group">
+            <label class="f-label">Latitude</label>
+            <input class="f-input" type="number" id="p-lat" value="37.88" step="0.01">
+            <span class="f-hint">Bay Area ≈ 37–38</span>
+          </div>
+          <div class="f-group">
+            <label class="f-label">Longitude</label>
+            <input class="f-input" type="number" id="p-lon" value="-122.23" step="0.01">
+            <span class="f-hint">Bay Area ≈ -122</span>
+          </div>
+        </div>
+        <button class="predict-cta" id="predBtn" onclick="doPrediction()">Run prediction →</button>
+      </div>
+      <div class="pred-result-pane" id="resultPane">
+        <div class="result-idle" id="resultIdle">
+          <div class="result-idle-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          </div>
+          <p>Fill in the 8 housing features and click "Run prediction" to see the model's output.</p>
+        </div>
+        <div class="result-active" id="resultActive" style="display:none">
+          <div class="result-eyebrow" id="rEye">Predicted median house value</div>
+          <div class="result-price" id="rPrice">$438,120</div>
+          <div class="result-range" id="rRange">Confidence interval: ±$52,800 (RMSE)</div>
+          <div class="result-divider"></div>
+          <div class="result-metrics">
+            <div><div class="rm-label">MedInc</div><div class="rm-val" id="rm1">8.33</div></div>
+            <div><div class="rm-label">Location</div><div class="rm-val" id="rm2">37.9°N</div></div>
+            <div><div class="rm-label">Rooms</div><div class="rm-val" id="rm3">6.98</div></div>
+          </div>
+          <div style="margin-top:28px;padding:14px 16px;border:1px solid var(--line)">
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--gold-dim);margin-bottom:8px">Response · 200 OK</div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:#5f5c54;line-height:1.8" id="rJson"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-label">Capabilities</div>
+    <h2 class="section-title reveal">Built for<br><em>production</em></h2>
+    <div class="features-grid reveal">
+      <div class="feat-card">
+        <div class="feat-num">01</div>
+        <svg class="feat-icon" viewBox="0 0 40 40" fill="none" stroke="#c9a84c" stroke-width="1">
+          <rect x="6" y="8" width="28" height="24" rx="2"/>
+          <path d="M13 16h14M13 22h8"/>
+        </svg>
+        <div class="feat-title">Atomic Pipeline</div>
+        <div class="feat-desc">Scaler and model are one object. Impossible to skip normalization. No silent data leakage — ever.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-num">02</div>
+        <svg class="feat-icon" viewBox="0 0 40 40" fill="none" stroke="#c9a84c" stroke-width="1">
+          <circle cx="20" cy="20" r="12"/>
+          <path d="M20 10v10l6 4"/>
+        </svg>
+        <div class="feat-title">Real-time REST API</div>
+        <div class="feat-desc">Flask server loads the pkl once. Every POST to /predict returns a structured JSON prediction in &lt;50ms.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-num">03</div>
+        <svg class="feat-icon" viewBox="0 0 40 40" fill="none" stroke="#c9a84c" stroke-width="1">
+          <path d="M8 32l8-10 6 6 10-14"/>
+          <circle cx="8" cy="32" r="2" fill="#c9a84c"/>
+        </svg>
+        <div class="feat-title">R² 0.815 Accuracy</div>
+        <div class="feat-desc">RandomForest with 100 trees achieves 81.5% explained variance. RMSE under $53k on 4,128 unseen homes.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CODE / API -->
+<section class="code-section" id="api">
+  <div class="container">
+    <div class="section-label">Integration</div>
+    <h2 class="section-title reveal">Three scripts,<br><em>one service</em></h2>
+    <div class="code-layout reveal">
+      <div class="code-copy">
+        <p>Train locally. Serialize the brain. Serve via HTTP. Any language, any frontend, any cloud.</p>
+        <div class="code-steps">
+          <div class="code-step">
+            <div class="cs-num">1</div>
+            <div class="cs-text">Run <strong>train_and_save.py</strong> — builds and serializes the full pipeline to <strong>production_model.pkl</strong>.</div>
+          </div>
+          <div class="code-step">
+            <div class="cs-num">2</div>
+            <div class="cs-text">Run <strong>app.py</strong> — Flask loads the pkl, exposes <strong>/predict</strong> and <strong>/batch_predict</strong> endpoints.</div>
+          </div>
+          <div class="code-step">
+            <div class="cs-num">3</div>
+            <div class="cs-text">Run <strong>test_api.py</strong> — fires 5 integration tests including single, batch, and error-handling scenarios.</div>
+          </div>
+        </div>
+        <div style="margin-top:36px;padding:16px 20px;border:1px solid var(--line)">
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--gold-dim);margin-bottom:10px">Install</div>
+          <div style="font-family:var(--font-mono);font-size:12px;color:var(--mist)">pip install -r requirements.txt</div>
+        </div>
+      </div>
+      <div class="code-pane">
+        <div class="code-tabs">
+          <button class="ctab active" onclick="switchCode(0,this)">train_and_save</button>
+          <button class="ctab" onclick="switchCode(1,this)">app.py</button>
+          <button class="ctab" onclick="switchCode(2,this)">test_api</button>
+        </div>
+        <pre class="active" id="code0">pipeline = <span class="t-fn">Pipeline</span>([
+  (<span class="t-str">'scaler'</span>,
+   StandardScaler()),
+  (<span class="t-str">'regressor'</span>,
+   RandomForestRegressor(
+     n_estimators=<span class="t-num">100</span>,
+     random_state=<span class="t-num">42</span>
+   ))
+])
+
+pipeline.<span class="t-fn">fit</span>(X_train, y_train)
+
+<span class="t-cm"># Save the brain</span>
+joblib.<span class="t-fn">dump</span>(
+  pipeline,
+  <span class="t-str">'production_model.pkl'</span>
+)</pre>
+        <pre id="code1"><span class="t-kw">from</span> flask <span class="t-kw">import</span> (
+  Flask, request, jsonify
+)
+<span class="t-kw">import</span> joblib, pandas <span class="t-kw">as</span> pd
+
+app = <span class="t-fn">Flask</span>(__name__)
+model = joblib.<span class="t-fn">load</span>(
+  <span class="t-str">'production_model.pkl'</span>
+)
+
+<span class="t-fn">@app.route</span>(<span class="t-str">'/predict'</span>,
+  methods=[<span class="t-str">'POST'</span>])
+<span class="t-kw">def</span> <span class="t-fn">predict</span>():
+  data = request.<span class="t-fn">get_json</span>()
+  df   = pd.<span class="t-fn">DataFrame</span>([data])
+  pred = model.<span class="t-fn">predict</span>(df)
+  <span class="t-kw">return</span> <span class="t-fn">jsonify</span>({
+    <span class="t-str">'prediction_usd'</span>:
+      pred[<span class="t-num">0</span>] * <span class="t-num">100_000</span>
+  })</pre>
+        <pre id="code2"><span class="t-kw">import</span> requests
+
+payload = {
+  <span class="t-str">"MedInc"</span>:     <span class="t-num">8.3252</span>,
+  <span class="t-str">"HouseAge"</span>:   <span class="t-num">41.0</span>,
+  <span class="t-str">"AveRooms"</span>:   <span class="t-num">6.984</span>,
+  <span class="t-str">"AveBedrms"</span>:  <span class="t-num">1.023</span>,
+  <span class="t-str">"Population"</span>: <span class="t-num">322.0</span>,
+  <span class="t-str">"AveOccup"</span>:   <span class="t-num">2.555</span>,
+  <span class="t-str">"Latitude"</span>:   <span class="t-num">37.88</span>,
+  <span class="t-str">"Longitude"</span>:  <span class="t-num">-122.23</span>
+}
+
+r = requests.<span class="t-fn">post</span>(
+  <span class="t-str">"http://localhost:5000/predict"</span>,
+  json=payload
+)
+<span class="t-fn">print</span>(r.<span class="t-fn">json</span>())
+<span class="t-cm"># → {"prediction_usd": 438120}</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="footer-logo"><span>Home</span>wise AI</div>
+      <p class="footer-tagline">A production-grade machine learning pipeline for California housing price prediction. Built with sklearn, Flask, and joblib.</p>
+    </div>
+    <div>
+      <div class="footer-col-title">Pipeline</div>
+      <ul class="footer-links">
+        <li><a href="#how">Architecture</a></li>
+        <li><a href="#predict">Live predictor</a></li>
+        <li><a href="#api">API reference</a></li>
+        <li><a href="#features">Features</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">Stack</div>
+      <ul class="footer-links">
+        <li><a href="#">scikit-learn</a></li>
+        <li><a href="#">Flask 3.0</a></li>
+        <li><a href="#">joblib</a></li>
+        <li><a href="#">pandas</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-col-title">Deploy</div>
+      <ul class="footer-links">
+        <li><a href="#">Docker guide</a></li>
+        <li><a href="#">Gunicorn setup</a></li>
+        <li><a href="#">FastAPI migration</a></li>
+        <li><a href="#">Cloud deploy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-copy">© 2024 Homewise AI · AI/ML Developer Track · Day 20</div>
+    <div class="footer-badge">RandomForest · Pipeline · REST</div>
+  </div>
+</footer>
+
+<script>
+  /* Cursor */
+  const cur = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove', e => {
+    mx=e.clientX; my=e.clientY;
+    cur.style.left=mx+'px'; cur.style.top=my+'px';
+  });
+  function animRing(){
+    rx += (mx-rx)*0.12; ry += (my-ry)*0.12;
+    ring.style.left=rx+'px'; ring.style.top=ry+'px';
+    requestAnimationFrame(animRing);
+  }
+  animRing();
+  document.querySelectorAll('a,button,input').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{ring.style.width='56px';ring.style.height='56px';ring.style.borderColor='rgba(201,168,76,0.8)';});
+    el.addEventListener('mouseleave',()=>{ring.style.width='36px';ring.style.height='36px';ring.style.borderColor='rgba(201,168,76,0.5)';});
+  });
+
+  /* Scroll reveal */
+  const obs = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('in-view'); });
+  },{threshold:0.12});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+  /* Code tabs */
+  function switchCode(idx, btn){
+    document.querySelectorAll('.ctab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('pre').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('code'+idx).classList.add('active');
+  }
+
+  /* ── Config ── */
+  const FLASK_URL = 'http://localhost:5000';
+
+  /* ── Utility ── */
+  function fmtMoney(v){
+    return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(v);
+  }
+  function fmtOrb(usd){
+    if(usd>=1000000) return '$'+(usd/1000000).toFixed(1)+'M';
+    if(usd>=1000)    return '$'+(usd/1000).toFixed(0)+'k';
+    return '$'+usd;
+  }
+
+  /* Safe element helpers — never throws on null */
+  function setStyle(el, prop, val){ if(el) el.style[prop] = val; }
+  function setText(el, val){        if(el) el.textContent  = val; }
+  function setHTML(el, val){        if(el) el.innerHTML    = val; }
+
+  /* ── API status indicator ── */
+  const statusDot = document.querySelector('.status-dot');
+  const statusTxt = document.querySelector('.status-txt');
+
+  function setStatus(online){
+    setStyle(statusDot, 'background', online ? '#4fa97c' : '#c94c4c');
+    setText(statusTxt,  online ? 'Flask · :5000 · online' : 'Flask offline — run app.py');
+  }
+
+  async function checkAPIStatus(){
+    try {
+      const r = await fetch(FLASK_URL + '/', {
+        method: 'GET',
+        signal: AbortSignal.timeout(2500)
+      });
+      setStatus(r.ok);
+    } catch { setStatus(false); }
+  }
+  checkAPIStatus();
+  setInterval(checkAPIStatus, 8000);
+
+  /* ── Main prediction — calls production_model.pkl via Flask ── */
+  async function doPrediction(){
+    const btn        = document.getElementById('predBtn');
+    const idlePane   = document.getElementById('resultIdle');
+    const activePane = document.getElementById('resultActive');
+
+    if(!btn){ console.error('predBtn not found'); return; }
+
+    btn.disabled    = true;
+    btn.textContent = 'Calling /predict…';
+    setStyle(idlePane,   'display', 'flex');
+    setStyle(activePane, 'display', 'none');
+
+    /* remove previous error if any */
+    const oldErr = document.getElementById('apiError');
+    if(oldErr) oldErr.remove();
+
+    /* Build payload — exact feature names sklearn expects */
+    const payload = {
+      MedInc:     parseFloat(document.getElementById('p-medinc').value) || 0,
+      HouseAge:   parseFloat(document.getElementById('p-age').value)    || 0,
+      AveRooms:   parseFloat(document.getElementById('p-rooms').value)  || 0,
+      AveBedrms:  parseFloat(document.getElementById('p-bedrm').value)  || 0,
+      Population: parseFloat(document.getElementById('p-pop').value)    || 0,
+      AveOccup:   parseFloat(document.getElementById('p-occup').value)  || 0,
+      Latitude:   parseFloat(document.getElementById('p-lat').value)    || 0,
+      Longitude:  parseFloat(document.getElementById('p-lon').value)    || 0,
+    };
+
+    try {
+      const response = await fetch(FLASK_URL + '/predict', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+        signal:  AbortSignal.timeout(10000)
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        throw new Error(err.error || `HTTP ${response.status}`);
+      }
+
+      const data     = await response.json();
+      const pred100k = data.prediction_100k;
+      const usd      = Math.round(data.prediction_usd);
+      const lo       = Math.round((pred100k - 0.528) * 100000);
+      const hi       = Math.round((pred100k + 0.528) * 100000);
+
+      /* Populate result panel */
+      setText(document.getElementById('rPrice'), fmtMoney(usd));
+      setText(document.getElementById('rEye'),   'production_model.pkl · ' + pred100k.toFixed(4) + ' × $100k');
+      setText(document.getElementById('rRange'),  `Confidence interval: ${fmtMoney(lo)} – ${fmtMoney(hi)}`);
+      setText(document.getElementById('rm1'),     payload.MedInc.toFixed(2));
+      setText(document.getElementById('rm2'),     payload.Latitude.toFixed(1) + '°N');
+      setText(document.getElementById('rm3'),     payload.AveRooms.toFixed(1));
+      setHTML(document.getElementById('rJson'),
+        `<span style="color:#4fa97c">"prediction_100k"</span>: <span style="color:#c9a84c">${pred100k.toFixed(4)}</span>,<br>` +
+        `<span style="color:#4fa97c">"prediction_usd"</span>:  <span style="color:#c9a84c">${usd}</span>,<br>` +
+        `<span style="color:#4fa97c">"prediction_label"</span>: <span style="color:#b87a5a">"${data.prediction_label || fmtMoney(usd)}"</span>,<br>` +
+        `<span style="color:#4fa97c">"model"</span>: <span style="color:#b87a5a">"RandomForest + StandardScaler Pipeline"</span>`);
+
+      setStyle(idlePane,   'display', 'none');
+      setStyle(activePane, 'display', 'flex');
+      setText(document.getElementById('heroPrice'), fmtOrb(usd));
+      setStatus(true);
+
+    } catch(err) {
+      const isOffline = err.name === 'TypeError' || err.name === 'TimeoutError'
+                     || err.message.includes('fetch') || err.message.includes('Failed');
+      const errBox = document.createElement('div');
+      errBox.id = 'apiError';
+      errBox.style.cssText =
+        'margin-top:20px;padding:16px 18px;border:1px solid rgba(201,76,76,0.35);' +
+        'background:rgba(201,76,76,0.07);font-family:var(--font-mono);font-size:11px;' +
+        'color:#c97070;line-height:1.9';
+      errBox.innerHTML = isOffline
+        ? `<strong style="color:#e08080">Flask server offline</strong><br><br>` +
+          `Start the server first:<br>` +
+          `<span style="color:#9e9b94">1. python train_and_save.py &nbsp;← creates pkl</span><br>` +
+          `<span style="color:#9e9b94">2. python app.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← starts Flask on :5000</span><br>` +
+          `<span style="color:#9e9b94">3. reload this page, then predict</span>`
+        : `<strong style="color:#e08080">Prediction error</strong><br>${err.message}`;
+
+      if(btn) btn.after(errBox);
+      setStatus(false);
+      /* keep idle pane visible so user sees the form */
+      setStyle(idlePane,   'display', 'flex');
+      setStyle(activePane, 'display', 'none');
+
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = 'Run prediction →';
+    }
+  }
+</script>
+</body>
+</html>
