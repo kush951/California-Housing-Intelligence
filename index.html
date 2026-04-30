@@ -1103,17 +1103,50 @@
           <p>Fill in the 8 housing features and click "Run prediction" to see the model's output.</p>
         </div>
         <div class="result-active" id="resultActive" style="display:none">
-          <div class="result-eyebrow" id="rEye">Predicted median house value</div>
-          <div class="result-price" id="rPrice">$438,120</div>
-          <div class="result-range" id="rRange">Confidence interval: ±$52,800 (RMSE)</div>
+          <div class="result-eyebrow" id="rEye">production_model.pkl prediction</div>
+          <div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:6px">
+            <div class="result-price" id="rPrice">$438,120</div>
+            <div id="rConfBadge" style="margin-bottom:12px;padding:3px 10px;font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;border:1px solid;border-radius:2px"></div>
+          </div>
+          <div class="result-range" id="rRange"></div>
+
+          <!-- confidence band bar -->
+          <div style="margin:14px 0 4px;position:relative;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:visible">
+            <div id="rBandBar" style="position:absolute;top:0;height:6px;background:rgba(201,168,76,0.25);border-radius:3px;transition:all .5s"></div>
+            <div id="rPredMark" style="position:absolute;top:-3px;width:2px;height:12px;background:var(--gold);border-radius:1px;transition:all .5s"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:9px;color:var(--mist);margin:4px 0 14px">
+            <span id="rBandLo">p5</span><span>Training range</span><span id="rBandHi">p95</span>
+          </div>
+
           <div class="result-divider"></div>
+
+          <!-- drift alert box — hidden when clean -->
+          <div id="rDriftBox" style="display:none;margin-bottom:14px;padding:12px 14px;border:1px solid rgba(201,120,76,0.4);background:rgba(201,120,76,0.07)">
+            <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;color:#d08060;margin-bottom:8px">⚠ DRIFT DETECTED</div>
+            <div id="rDriftAlerts" style="font-size:12px;color:#b07050;line-height:1.8"></div>
+          </div>
+
+          <!-- retrain banner -->
+          <div id="rRetrainBox" style="display:none;margin-bottom:14px;padding:10px 14px;border:1px solid rgba(201,76,76,0.4);background:rgba(201,76,76,0.07)">
+            <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;color:#c07070">🔴 RETRAIN RECOMMENDED</div>
+            <div style="font-size:11px;color:#a06060;margin-top:4px;line-height:1.6">Multiple drift signals detected. Model performance may be degraded. Run train_and_save.py with fresh data.</div>
+          </div>
+
           <div class="result-metrics">
             <div><div class="rm-label">MedInc</div><div class="rm-val" id="rm1">8.33</div></div>
             <div><div class="rm-label">Location</div><div class="rm-val" id="rm2">37.9°N</div></div>
             <div><div class="rm-label">Rooms</div><div class="rm-val" id="rm3">6.98</div></div>
           </div>
-          <div style="margin-top:28px;padding:14px 16px;border:1px solid var(--line)">
-            <div style="font-family:var(--font-mono);font-size:10px;color:var(--gold-dim);margin-bottom:8px">Response · 200 OK</div>
+
+          <!-- feature drift z-scores -->
+          <div id="rDriftScores" style="margin-top:16px;display:none">
+            <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;color:var(--gold-dim);margin-bottom:8px">Feature drift  (z-score vs training)</div>
+            <div id="rDriftScoreList"></div>
+          </div>
+
+          <div style="margin-top:16px;padding:12px 14px;border:1px solid var(--line)">
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--gold-dim);margin-bottom:8px">Response · 200 OK · /predict</div>
             <div style="font-family:var(--font-mono);font-size:11px;color:#5f5c54;line-height:1.8" id="rJson"></div>
           </div>
         </div>
@@ -1412,21 +1445,86 @@ r = requests.<span class="t-fn">post</span>(
       const data     = await response.json();
       const pred100k = data.prediction_100k;
       const usd      = Math.round(data.prediction_usd);
-      const lo       = Math.round((pred100k - 0.528) * 100000);
-      const hi       = Math.round((pred100k + 0.528) * 100000);
+      const mon      = data.monitoring   || {};
+      const band     = data.confidence_band || {};
+      const conf     = data.confidence   || 'high';
 
-      /* Populate result panel */
+      /* ── Core price ── */
       setText(document.getElementById('rPrice'), fmtMoney(usd));
       setText(document.getElementById('rEye'),   'production_model.pkl · ' + pred100k.toFixed(4) + ' × $100k');
-      setText(document.getElementById('rRange'),  `Confidence interval: ${fmtMoney(lo)} – ${fmtMoney(hi)}`);
       setText(document.getElementById('rm1'),     payload.MedInc.toFixed(2));
       setText(document.getElementById('rm2'),     payload.Latitude.toFixed(1) + '°N');
       setText(document.getElementById('rm3'),     payload.AveRooms.toFixed(1));
+
+      /* ── Confidence badge ── */
+      const badge = document.getElementById('rConfBadge');
+      if(badge){
+        const confColors = {high:'rgba(79,169,124,0.8)',medium:'rgba(201,168,76,0.8)',low:'rgba(201,76,76,0.8)'};
+        badge.textContent    = conf.toUpperCase() + ' CONFIDENCE';
+        badge.style.color    = confColors[conf] || confColors.high;
+        badge.style.borderColor = confColors[conf] || confColors.high;
+      }
+
+      /* ── Confidence band range label ── */
+      const p5usd  = Math.round(band.p5_usd  || (pred100k - 0.528) * 1e5);
+      const p95usd = Math.round(band.p95_usd || (pred100k + 0.528) * 1e5);
+      setText(document.getElementById('rRange'), `Training range: ${fmtMoney(p5usd)} – ${fmtMoney(p95usd)}`);
+      setText(document.getElementById('rBandLo'), fmtMoney(p5usd));
+      setText(document.getElementById('rBandHi'), fmtMoney(p95usd));
+
+      /* ── Confidence band bar position ── */
+      const loUsd   = band.low_below_usd || p5usd  * 0.5;
+      const hiUsd   = band.low_above_usd || p95usd * 1.5;
+      const totalSpan = hiUsd - loUsd;
+      const barLeft  = ((p5usd - loUsd)  / totalSpan * 100).toFixed(1);
+      const barWidth = ((p95usd - p5usd) / totalSpan * 100).toFixed(1);
+      const markLeft = ((usd    - loUsd)  / totalSpan * 100).toFixed(1);
+      setStyle(document.getElementById('rBandBar'),  'left',  barLeft  + '%');
+      setStyle(document.getElementById('rBandBar'),  'width', barWidth + '%');
+      setStyle(document.getElementById('rPredMark'), 'left',  Math.min(98, Math.max(1, markLeft)) + '%');
+
+      /* ── Drift alert box ── */
+      const driftBox    = document.getElementById('rDriftBox');
+      const driftAlerts = document.getElementById('rDriftAlerts');
+      const retrainBox  = document.getElementById('rRetrainBox');
+      if(mon.drift_detected && mon.alerts && mon.alerts.length){
+        setStyle(driftBox, 'display', 'block');
+        setHTML(driftAlerts, mon.alerts.map(a => `• ${a}`).join('<br>'));
+      } else {
+        setStyle(driftBox, 'display', 'none');
+      }
+      setStyle(retrainBox, 'display', mon.retrain_recommended ? 'block' : 'none');
+
+      /* ── Feature z-scores ── */
+      const scoreBox  = document.getElementById('rDriftScores');
+      const scoreList = document.getElementById('rDriftScoreList');
+      if(mon.feature_drift && Object.keys(mon.feature_drift).length){
+        setStyle(scoreBox, 'display', 'block');
+        const rows = Object.entries(mon.feature_drift).map(([feat, z]) => {
+          const abs  = Math.abs(z);
+          const pct  = Math.min(100, abs / 3 * 100).toFixed(0);
+          const col  = abs < 1 ? '#4fa97c' : abs < 2 ? '#c9a84c' : '#c97070';
+          const sign = z >= 0 ? '+' : '';
+          return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:11px">
+            <span style="width:76px;font-family:var(--font-mono);color:var(--mist)">${feat}</span>
+            <div style="flex:1;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden">
+              <div style="height:4px;width:${pct}%;background:${col};border-radius:2px;transition:width .4s"></div>
+            </div>
+            <span style="width:44px;text-align:right;font-family:var(--font-mono);color:${col}">${sign}${z.toFixed(2)}σ</span>
+          </div>`;
+        }).join('');
+        setHTML(scoreList, rows);
+      } else {
+        setStyle(scoreBox, 'display', 'none');
+      }
+
+      /* ── JSON preview ── */
       setHTML(document.getElementById('rJson'),
         `<span style="color:#4fa97c">"prediction_100k"</span>: <span style="color:#c9a84c">${pred100k.toFixed(4)}</span>,<br>` +
         `<span style="color:#4fa97c">"prediction_usd"</span>:  <span style="color:#c9a84c">${usd}</span>,<br>` +
-        `<span style="color:#4fa97c">"prediction_label"</span>: <span style="color:#b87a5a">"${data.prediction_label || fmtMoney(usd)}"</span>,<br>` +
-        `<span style="color:#4fa97c">"model"</span>: <span style="color:#b87a5a">"RandomForest + StandardScaler Pipeline"</span>`);
+        `<span style="color:#4fa97c">"confidence"</span>:      <span style="color:#b87a5a">"${conf}"</span>,<br>` +
+        `<span style="color:#4fa97c">"drift_detected"</span>:  <span style="color:#c9a84c">${mon.drift_detected||false}</span>,<br>` +
+        `<span style="color:#4fa97c">"retrain_recommended"</span>: <span style="color:#c9a84c">${mon.retrain_recommended||false}</span>`);
 
       setStyle(idlePane,   'display', 'none');
       setStyle(activePane, 'display', 'flex');

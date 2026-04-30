@@ -1,0 +1,111 @@
+{
+  "trained_at": "2026-04-30T05:35:55.371181+00:00",
+  "model_version": "1.0.0",
+  "training_samples": 16512,
+  "test_samples": 4128,
+  "model_metrics": {
+    "r2": 0.8059,
+    "rmse": 0.504376,
+    "mae": 0.326418
+  },
+  "features": [
+    "MedInc",
+    "HouseAge",
+    "AveRooms",
+    "AveBedrms",
+    "Population",
+    "AveOccup",
+    "Latitude",
+    "Longitude"
+  ],
+  "feature_stats": {
+    "MedInc": {
+      "mean": 3.880754,
+      "std": 1.904294,
+      "min": 0.4999,
+      "max": 15.0001,
+      "p5": 1.59946,
+      "p95": 7.3108
+    },
+    "HouseAge": {
+      "mean": 28.608285,
+      "std": 12.602499,
+      "min": 1.0,
+      "max": 52.0,
+      "p5": 8.0,
+      "p95": 52.0
+    },
+    "AveRooms": {
+      "mean": 5.435235,
+      "std": 2.387375,
+      "min": 0.888889,
+      "max": 141.909091,
+      "p5": 3.438549,
+      "p95": 7.645946
+    },
+    "AveBedrms": {
+      "mean": 1.096685,
+      "std": 0.433215,
+      "min": 0.333333,
+      "max": 25.636364,
+      "p5": 0.939394,
+      "p95": 1.276685
+    },
+    "Population": {
+      "mean": 1426.453004,
+      "std": 1137.05638,
+      "min": 3.0,
+      "max": 35682.0,
+      "p5": 349.0,
+      "p95": 3282.45
+    },
+    "AveOccup": {
+      "mean": 3.096961,
+      "std": 11.578744,
+      "min": 0.692308,
+      "max": 1243.333333,
+      "p5": 1.872511,
+      "p95": 4.333333
+    },
+    "Latitude": {
+      "mean": 35.643149,
+      "std": 2.136665,
+      "min": 32.55,
+      "max": 41.95,
+      "p5": 32.83,
+      "p95": 38.96
+    },
+    "Longitude": {
+      "mean": -119.58229,
+      "std": 2.005654,
+      "min": -124.35,
+      "max": -114.31,
+      "p5": -122.47,
+      "p95": -117.08
+    }
+  },
+  "prediction_stats": {
+    "mean": 2.075405,
+    "std": 1.067109,
+    "p5": 0.728625,
+    "p95": 4.38993,
+    "low_confidence_below": 0.364312,
+    "low_confidence_above": 6.584895
+  },
+  "feature_importances": {
+    "MedInc": 0.534833,
+    "HouseAge": 0.053427,
+    "AveRooms": 0.042263,
+    "AveBedrms": 0.026536,
+    "Population": 0.027847,
+    "AveOccup": 0.13834,
+    "Latitude": 0.088509,
+    "Longitude": 0.088245
+  },
+  "retrain_triggers": {
+    "min_r2_before_alert": 0.75,
+    "max_mae_drift_pct": 0.2,
+    "feature_drift_z_threshold": 3.0,
+    "min_predictions_for_check": 50
+  }
+}
